@@ -29,8 +29,13 @@
 
 #define ACC_CTRL_REG1_A 0x20
 #define ACC_CTRL_REG4_A 0x23
+#define ACC_STATUS_REG_A 0x27
 #define ACC_OUT_X_L_A 0x28
 #define ACC_OUT_X_H_A 0x29
+#define ACC_OUT_Y_L_A 0x2A
+#define ACC_OUT_Y_H_A 0x2B
+#define ACC_OUT_Z_L_A 0x2C
+#define ACC_OUT_Z_H_A 0x2D
 
 #define MAG_CRA_REG_M 0x00
 #define MAG_CRB_REG_M 0x01
@@ -263,8 +268,10 @@ static void my_usb_print_int(usbd_device *usbd_dev, int32_t value)
 
 static void enable_accelerometer(void)
 {
+    // enable accelerometer, 100Hz
     uint8_t data[1]={0x97};
     write_i2c(I2C1, I2C_ACC_ADDR, ACC_CTRL_REG1_A, 1, data);
+    // high-resolution output mode
     data[0]=0x08;
     write_i2c(I2C1, I2C_ACC_ADDR, ACC_CTRL_REG4_A, 1, data);
 }
@@ -306,6 +313,16 @@ static void cdcacm_data_rx_cb(usbd_device *usbd_dev, uint8_t ep)
                 usbd_ep_write_packet(usbd_dev, 0x82, data, 6);
                 // for some reason we need to do this every time ...
                 enable_magnetometer();
+            } else if (buf[i] == 'a') {
+                //read_i2c(I2C1, I2C_ACC_ADDR, ACC_STATUS_REG_A, 1, data);
+                //my_usb_print_int(usbd_dev, data[0]);
+                read_i2c(I2C1, I2C_ACC_ADDR, ACC_OUT_X_L_A, 1, data);
+                read_i2c(I2C1, I2C_ACC_ADDR, ACC_OUT_X_H_A, 1, data+1);
+                read_i2c(I2C1, I2C_ACC_ADDR, ACC_OUT_Y_L_A, 1, data+2);
+                read_i2c(I2C1, I2C_ACC_ADDR, ACC_OUT_Y_H_A, 1, data+3);
+                read_i2c(I2C1, I2C_ACC_ADDR, ACC_OUT_Z_L_A, 1, data+4);
+                read_i2c(I2C1, I2C_ACC_ADDR, ACC_OUT_Z_H_A, 1, data+5);
+                usbd_ep_write_packet(usbd_dev, 0x82, data, 6);
             } else if (buf[i] == 't') {
                 read_i2c(I2C1, I2C_MAG_ADDR, TEMP_OUT_H_M, 1, data);
                 read_i2c(I2C1, I2C_MAG_ADDR, TEMP_OUT_L_M, 1, data+1);
